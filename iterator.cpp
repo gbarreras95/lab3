@@ -52,8 +52,12 @@ class Base{
     //constructors
     Base() { };
 
+    Base* leftOperand;
+    Base* rightOperand;
+
     //Pure virtual functions
     virtual double evaluate() = 0;
+    virtual Iterator * make_itr() = 0;
 };
 
 class BubbleSort: public Sort{
@@ -209,12 +213,14 @@ class Iterator{
 
 class OperatorIterator: public Iterator{
     public:
+
+        OperatorIterator(Base * ptr): Iterator(ptr){;}
         void first(){
             current_ptr = self_ptr->leftOperand;
         }
 
         void next(){
-            if(*current_ptr == self_ptr->leftOperand){
+            if (current_ptr == self_ptr->leftOperand){
                 current_ptr = self_ptr->rightOperand;
             }
             else 
@@ -227,8 +233,10 @@ class OperatorIterator: public Iterator{
             }
             else
                 return false;
+        }
 
         Base* current(){
+            cout << "current operator" << endl;
             return current_ptr;
         }
 
@@ -236,16 +244,16 @@ class OperatorIterator: public Iterator{
 
 class UnaryIterator: public Iterator{
     public:
-        UnaryIterator(Base * ptr) : Iterator(ptr){
-            this->self_ptr = ptr;    
-        }
+        UnaryIterator(Base * ptr): Iterator(ptr){;}
 
         void first(){
-           current_ptr = self_ptr->Operand;
+           current_ptr = self_ptr->leftOperand;
         }
 
         void next(){
-            current_ptr = NULL;
+            if (current_ptr = self_ptr->leftOperand){
+                current_ptr = NULL;
+             }
         }
 
         bool is_done(){
@@ -256,19 +264,21 @@ class UnaryIterator: public Iterator{
                 return false;
         }
         Base* current(){
+            cout << "current unary" << endl;
             return current_ptr;
         }
 };
 
 class NullIterator: public Iterator{
     public:
-        NullIterator(Base * ptr);
-        void first();
-        void next();
+        NullIterator(Base * ptr): Iterator(ptr){;}
+        void first(){};
+        void next(){};
         bool is_done(){
             return true;
         }
         Base* current(){
+            cout << "current null" << endl;
             return NULL;
         }
 };
@@ -278,16 +288,14 @@ class PreOrderIterator : public Iterator{
         stack<Iterator*> iterators;
 
     public:
-        PreOrderIterator(Base* ptr): Iterator(ptr){
-            this->self_ptr = ptr;   
-        }
+        PreOrderIterator(Base* ptr): Iterator(ptr){}
 
         void first(){
             while ( iterators.size() > 0 ){
                 iterators.pop();
             }
 
-            Iterator * it = self_ptr->make_ptr();
+            Iterator * it = self_ptr->make_itr();
             it->first();
             iterators.push(it);
         }
@@ -298,7 +306,7 @@ class PreOrderIterator : public Iterator{
 
             while (iterators.top()->is_done()){
                 iterators.pop();
-                if (iterators.size == 0)
+                if (iterators.size() == 0)
                     break;
 
                 iterators.top()->next();
@@ -322,7 +330,11 @@ class Op: public Base{
     double num;
     Op(){num = 0;}
     Op(double val){ num = val;}
-    virtual double evaluate(){return num;}
+    double evaluate(){
+        cout << "evaluate op" << endl;
+        return num;
+    }
+    virtual Iterator * make_itr(){ return new NullIterator(this); }
 
 };
 
@@ -334,7 +346,8 @@ class Mult: public Base{
     
     Mult(){};
     Mult (Base* a, Base* b){leftOperand = a; rightOperand = b;}
-    virtual double evaluate(){
+    double evaluate(){
+        cout << "evaluate mult " << endl;
         return leftOperand->evaluate() * rightOperand->evaluate();
     }
     Iterator * make_itr(){ return new OperatorIterator(this); }
@@ -348,7 +361,8 @@ class Div: public Base{
     Div(){};
     Div (Base* a, Base* b){leftOperand = a; rightOperand = b;}
     
-    virtual double evaluate(){
+    double evaluate(){
+        cout << "evaluate div " << endl;
         if(rightOperand->evaluate() == 0){
             cout << "Error: Cannot divide by zero";
             exit(1);
@@ -367,7 +381,9 @@ class Add: public Base{
     
     Add(){};
     Add (Base* a, Base* b){leftOperand = a; rightOperand = b;}
-    virtual double evaluate(){
+    double evaluate(){
+        cout << "evaluate add " << endl;
+
         return leftOperand->evaluate() + rightOperand->evaluate();
     }
     Iterator * make_itr(){ return new OperatorIterator(this); }
@@ -381,7 +397,9 @@ class Sub: public Base{
     
     Sub(){};
     Sub (Base* a, Base* b){leftOperand = a; rightOperand = b;}
-    virtual double evaluate(){
+    double evaluate(){
+        cout << "evaluate sub " << endl;
+
         return leftOperand->evaluate() - rightOperand->evaluate();
     }
     Iterator * make_itr(){ return new OperatorIterator(this); }
@@ -395,7 +413,9 @@ class Sqr: public Base{
     
     Sqr(){};
     Sqr (Base* a){Operand = a;}
-    virtual double evaluate(){
+    double evaluate(){
+        cout << "evaluate sqr " << endl;
+
         return Operand->evaluate() * Operand->evaluate();
     }
     Iterator * make_itr(){ return new UnaryIterator(this); }
@@ -408,7 +428,7 @@ class Abs: public Base{
     
         Abs(){};
         Abs (Base* a){Operand = a;}
-        virtual double evaluate(){
+        double evaluate(){
             return abs(Operand->evaluate());
          }
 };
@@ -418,7 +438,7 @@ class Floor: public Base{
     
         Floor(){};
         Floor (Base* a){Operand = a;}
-        virtual double evaluate(){
+        double evaluate(){
             return floor(Operand->evaluate());
          }
 };
@@ -428,28 +448,11 @@ class Ceil: public Base{
     
         Ceil(){};
         Ceil (Base* a){Operand = a;}
-        virtual double evaluate(){
+        double evaluate(){
             return ceil(Operand->evaluate());
          }
 };
 
-class Iterator{
-    protected:
-        Base * self_ptr;
-        Base * current_ptr;
-
-    public:
-        Iterator (Base* ptr) {this->self_ptr = ptr;}
-
-        //set up itr to start at beginning
-        virtual void first() = 0;
-        //move to next element
-        virtual void next() = 0;
-        //true if finished with all elements
-        virtual bool is_done() = 0;
-        //Return element iterator currently points too
-        virtual Base* current() = 0;
-};
 
 int main(){
     Op* op3 = new Op(3);
@@ -458,16 +461,22 @@ int main(){
     Add* add = new Add(op3, op4);
     Sqr* sqr = new Sqr(op2);
     Sub* sub = new Sub(add, sqr);
-    Sqr* sqr = new Sqr(sub);
+    Sqr* sqr2 = new Sqr(sub);
 
     cout << "--- PreOrder Iteration ---" << endl;
-    PreOrderIterator* pre_itr = new PrerOderIterator(sqr);
-    for (pre_itr->first(); !pre_itr->is_done(); pre_itr->next()){
-            pre_itr->current()->evaluate();
+    cout << "test1" << endl;
+    PreOrderIterator* pre_itr = new PreOrderIterator(add);
+    int i = 2;
+    pre_itr->first(); 
+    cout<<pre_itr->current()->evaluate()<<endl;
+    if(!pre_itr->is_done()){cout<<"true"<<endl;}
+    /*for (pre_itr->first(); !pre_itr->is_done(); pre_itr->next()){
+            cout << "test" << i << endl;
+            
+           cout<< pre_itr->current()->evaluate();
             cout << endl;
         }
-   
+   */
     return 0;
 }
 
-}
